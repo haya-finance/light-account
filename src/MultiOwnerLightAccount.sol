@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
@@ -66,8 +67,8 @@ contract MultiOwnerLightAccount is BaseLightAccount, CustomSlotInitializable {
     /// implementation of LightAccount must be deployed with the new entry point address, and then `upgradeToAndCall`
     /// must be called to upgrade the implementation.
     /// @param owners_ The initial owners of the account.
-    function initialize(address[] calldata owners_) public virtual initializer {
-        _initialize(owners_);
+    function initialize(address[] calldata owners_, address gasToken_, address paymaster_) public virtual initializer {
+        _initialize(owners_, gasToken_, paymaster_);
     }
 
     /// @notice Update owners of the account. Can only be called by a current owner or from the entry point via
@@ -90,7 +91,8 @@ contract MultiOwnerLightAccount is BaseLightAccount, CustomSlotInitializable {
         return _getStorage().owners.getAll().toAddressArray();
     }
 
-    function _initialize(address[] calldata owners_) internal virtual {
+    function _initialize(address[] calldata owners_, address gasToken_, address paymaster_) internal virtual {
+        IERC20(gasToken_).approve(paymaster_, type(uint256).max);
         emit LightAccountInitialized(_ENTRY_POINT, owners_);
         _updateOwners(owners_, new address[](0));
     }

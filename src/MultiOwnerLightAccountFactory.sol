@@ -16,6 +16,13 @@ contract MultiOwnerLightAccountFactory is BaseLightAccountFactory {
     uint256 internal constant _MAX_OWNERS_ON_CREATION = 100;
     MultiOwnerLightAccount public immutable ACCOUNT_IMPLEMENTATION;
 
+    bool internal _ready;
+
+    address internal _gasToken;
+
+    address internal _defaultPaymaster;
+
+    error NotReady();
     error InvalidOwners();
     error OwnersArrayEmpty();
     error OwnersLimitExceeded();
@@ -26,6 +33,12 @@ contract MultiOwnerLightAccountFactory is BaseLightAccountFactory {
         ENTRY_POINT = entryPoint;
     }
 
+    function setGasTokenAndPaymaster(address gasToken, address paymaster) external onlyOwner {
+        _gasToken = gasToken;
+        _defaultPaymaster = paymaster;
+        _ready = true;
+    }
+
     /// @notice Create an account, and return its address. Returns the address even if the account is already deployed.
     /// @dev During UserOperation execution, this method is called only if the account is not deployed. This method
     /// returns an existing account address so that `entryPoint.getSenderAddress()` would work even after account
@@ -33,7 +46,11 @@ contract MultiOwnerLightAccountFactory is BaseLightAccountFactory {
     /// @param owners The owners of the account to be created.
     /// @param salt A salt, which can be changed to create multiple accounts with the same owners.
     /// @return account The address of either the newly deployed account or an existing account with these owners and salt.
-    function createAccount(address[] calldata owners, uint256 salt) external returns (MultiOwnerLightAccount account) {
+    function createAccount(address[] calldata owners, uint256 salt)
+        external
+        onlyReady
+        returns (MultiOwnerLightAccount account)
+    {
         _validateOwnersArray(owners);
 
         (bool alreadyDeployed, address accountAddress) =
@@ -42,7 +59,7 @@ contract MultiOwnerLightAccountFactory is BaseLightAccountFactory {
         account = MultiOwnerLightAccount(payable(accountAddress));
 
         if (!alreadyDeployed) {
-            account.initialize(owners);
+            account.initialize(owners, _gasToken, _defaultPaymaster);
         }
     }
 
@@ -51,7 +68,11 @@ contract MultiOwnerLightAccountFactory is BaseLightAccountFactory {
     /// @param owner The owner of the account to be created.
     /// @param salt A salt, which can be changed to create multiple accounts with the same owner.
     /// @return account The address of either the newly deployed account or an existing account with this owner and salt.
-    function createAccountSingle(address owner, uint256 salt) external returns (MultiOwnerLightAccount account) {
+    function createAccountSingle(address owner, uint256 salt)
+        external
+        onlyReady
+        returns (MultiOwnerLightAccount account)
+    {
         if (owner == address(0)) {
             revert InvalidOwners();
         }
@@ -65,7 +86,7 @@ contract MultiOwnerLightAccountFactory is BaseLightAccountFactory {
         account = MultiOwnerLightAccount(payable(accountAddress));
 
         if (!alreadyDeployed) {
-            account.initialize(owners);
+            account.initialize(owners, _gasToken, _defaultPaymaster);
         }
     }
 
@@ -112,5 +133,12 @@ contract MultiOwnerLightAccountFactory is BaseLightAccountFactory {
             }
             prevOwner = owners[i];
         }
+    }
+
+    modifier onlyReady() {
+        if (!_ready) {
+            revert NotReady();
+        }
+        _;
     }
 }

@@ -9,7 +9,11 @@ import {MultiOwnerLightAccountFactory} from "../src/MultiOwnerLightAccountFactor
 
 contract Deploy_MultiOwnerLightAccountFactory is Script {
     // Load entrypoint from env
+    uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
     address public entryPointAddr = vm.envAddress("ENTRYPOINT");
+    address public hayaToken = vm.envAddress("HAYA_CONTRACT_ADDRESS");
+    address public paymaster = vm.envAddress("PAYMASTER_CONTRACT_ADDRESS");
+
     IEntryPoint public entryPoint = IEntryPoint(payable(entryPointAddr));
 
     // Load factory owner from env
@@ -19,13 +23,13 @@ contract Deploy_MultiOwnerLightAccountFactory is Script {
     error DeployedAddressMismatch(address deployed);
 
     function run() public {
-        vm.startBroadcast();
+        vm.startBroadcast(deployerPrivateKey);
 
         // Init code hash check
         bytes32 initCodeHash =
             keccak256(abi.encodePacked(type(MultiOwnerLightAccountFactory).creationCode, abi.encode(owner, entryPoint)));
 
-        if (initCodeHash != 0x69e0f4a2942425638860e9982bd32f08941a082681e53208de970099f18252cc) {
+        if (initCodeHash != 0x9ce10d22b464febda8c06cd72661aa53f096c10ce6389ac6d85175fc7c072a4f) {
             revert InitCodeHashMismatch(initCodeHash);
         }
 
@@ -40,14 +44,14 @@ contract Deploy_MultiOwnerLightAccountFactory is Script {
         console.log("********************************");
 
         MultiOwnerLightAccountFactory factory = new MultiOwnerLightAccountFactory{
-            salt: 0x0000000000000000000000000000000000000000bb3ab048b3f4ef2620ea0163
+            salt: 0x0000000000000000000000000000000000000000bb3ab048b3f4ef2620ea0100
         }(owner, entryPoint);
 
         // Deployed address check
-        if (address(factory) != 0x000000000019d2Ee9F2729A65AfE20bb0020AefC) {
+        if (address(factory) != 0xF140c3BC4f64ee445a05dB390F06F7a166b06041) {
             revert DeployedAddressMismatch(address(factory));
         }
-
+        _initFactory(address(factory));
         _addStakeForFactory(address(factory));
 
         console.log("MultiOwnerLightAccountFactory:", address(factory));
@@ -55,6 +59,10 @@ contract Deploy_MultiOwnerLightAccountFactory is Script {
         console.log();
 
         vm.stopBroadcast();
+    }
+
+    function _initFactory(address factoryAddr) internal {
+        MultiOwnerLightAccountFactory(payable(factoryAddr)).setGasTokenAndPaymaster(hayaToken, paymaster);
     }
 
     function _addStakeForFactory(address factoryAddr) internal {
