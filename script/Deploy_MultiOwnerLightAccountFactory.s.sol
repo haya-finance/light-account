@@ -44,11 +44,11 @@ contract Deploy_MultiOwnerLightAccountFactory is Script {
         console.log("********************************");
 
         MultiOwnerLightAccountFactory factory = new MultiOwnerLightAccountFactory{
-            salt: 0x0000000000000000000000000000000000000000bb3ab048b3f4ef2620ea0100
+            salt: 0x0000000000000000000000000000000000000000bb3ab048b3f4ef2620ea0000
         }(owner, entryPoint);
 
         // Deployed address check
-        if (address(factory) != 0xF140c3BC4f64ee445a05dB390F06F7a166b06041) {
+        if (address(factory) != 0x692d53919004F403f01305E930DEa9105463Bf09) {
             revert DeployedAddressMismatch(address(factory));
         }
         _initFactory(address(factory));

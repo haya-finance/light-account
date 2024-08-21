@@ -9,19 +9,23 @@ import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {BaseLightAccountFactory} from "../src/common/BaseLightAccountFactory.sol";
 import {MultiOwnerLightAccount} from "../src/MultiOwnerLightAccount.sol";
 import {MultiOwnerLightAccountFactory} from "../src/MultiOwnerLightAccountFactory.sol";
+import {StandardTokenMock} from "../src/mock/StandardTokenMock.sol";
 
 contract MultiOwnerLightAccountFactoryTest is Test {
     uint256 internal constant _MAX_OWNERS_ON_CREATION = 100;
-
+    address payable public constant BENEFICIARY = payable(address(0xbe9ef1c1a2ee));
     address[] public owners;
     MultiOwnerLightAccountFactory public factory;
     EntryPoint public entryPoint;
+    StandardTokenMock public gasToken;
 
     function setUp() public {
         entryPoint = new EntryPoint();
         factory = new MultiOwnerLightAccountFactory(address(this), entryPoint);
+        gasToken = new StandardTokenMock("GasToken", "GTK", 18);
         owners = new address[](1);
         owners[0] = address(1);
+        factory.setGasTokenAndPaymaster(address(gasToken), BENEFICIARY);
     }
 
     function testReturnSameAddressWhenAccountAlreadyExists() public {

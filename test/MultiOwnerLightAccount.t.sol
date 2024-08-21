@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import "forge-std/Test.sol";
 
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
+
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
@@ -16,6 +17,7 @@ import {LinkedListSet, LinkedListSetLib} from "modular-account/libraries/LinkedL
 import {BaseLightAccount} from "../src/common/BaseLightAccount.sol";
 import {MultiOwnerLightAccount} from "../src/MultiOwnerLightAccount.sol";
 import {MultiOwnerLightAccountFactory} from "../src/MultiOwnerLightAccountFactory.sol";
+import {StandardTokenMock} from "../src/mock/StandardTokenMock.sol";
 
 contract MultiOwnerLightAccountTest is Test {
     using stdStorage for StdStorage;
@@ -26,6 +28,7 @@ contract MultiOwnerLightAccountTest is Test {
     uint256 public constant EOA_PRIVATE_KEY = 1;
     address payable public constant BENEFICIARY = payable(address(0xbe9ef1c1a2ee));
     bytes32 internal constant _MESSAGE_TYPEHASH = keccak256("LightAccountMessage(bytes message)");
+    StandardTokenMock public gasToken;
     address public eoaAddress;
     MultiOwnerLightAccount public account;
     MultiOwnerLightAccount public contractOwnedAccount;
@@ -40,7 +43,9 @@ contract MultiOwnerLightAccountTest is Test {
     function setUp() public {
         eoaAddress = vm.addr(EOA_PRIVATE_KEY);
         entryPoint = new EntryPoint();
+        gasToken = new StandardTokenMock("GasToken", "GTK", 18);
         MultiOwnerLightAccountFactory factory = new MultiOwnerLightAccountFactory(address(this), entryPoint);
+        factory.setGasTokenAndPaymaster(address(gasToken), BENEFICIARY);
         account = factory.createAccountSingle(eoaAddress, 1);
         vm.deal(address(account), 1 << 128);
         lightSwitch = new LightSwitch();
@@ -279,6 +284,7 @@ contract MultiOwnerLightAccountTest is Test {
 
     function testInitialize() public {
         MultiOwnerLightAccountFactory factory = new MultiOwnerLightAccountFactory(address(this), entryPoint);
+        factory.setGasTokenAndPaymaster(address(gasToken), BENEFICIARY);
         vm.expectEmit(true, false, false, false);
         emit Initialized(0);
         account = factory.createAccountSingle(eoaAddress, 1);
@@ -286,6 +292,7 @@ contract MultiOwnerLightAccountTest is Test {
 
     function testCannotInitializeWithZeroOwner() public {
         MultiOwnerLightAccountFactory factory = new MultiOwnerLightAccountFactory(address(this), entryPoint);
+        factory.setGasTokenAndPaymaster(address(gasToken), BENEFICIARY);
         vm.expectRevert(MultiOwnerLightAccountFactory.InvalidOwners.selector);
         account = factory.createAccountSingle(address(0), 1);
     }
